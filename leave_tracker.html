@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leave Tracker — TaskTracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F7F5;
+    --surface: #FFFFFF;
+    --surface2: #F0F0EC;
+    --border: rgba(0,0,0,0.10);
+    --border-strong: rgba(0,0,0,0.18);
+    --text: #1A1A18;
+    --text-secondary: #6B6B66;
+    --text-hint: #9E9E99;
+    --accent: #1A6B4A;
+    --accent-bg: #E6F4EE;
+    --accent-text: #0F4A32;
+    --danger: #C0392B;
+    --danger-bg: #FDECEA;
+    --danger-text: #8B1A12;
+    --warn-bg: #FEF3E2;
+    --warn-text: #7A4A00;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo-dot {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-dot svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sync-status {
+    font-size: 12px;
+    color: var(--text-hint);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-hint);
+    transition: background 0.3s;
+  }
+  .sync-dot.ok { background: var(--accent); }
+  .sync-dot.err { background: var(--danger); }
+  .sync-dot.loading { background: #F0A500; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Config banner ── */
+  #configBanner {
+    background: var(--warn-bg);
+    border-bottom: 1px solid rgba(240,165,0,0.25);
+    padding: 10px 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--warn-text);
+  }
+  #configBanner a { color: var(--accent); font-weight: 500; }
+  #configBanner .close-banner { margin-left: auto; cursor: pointer; opacity: 0.5; font-size: 18px; line-height: 1; }
+  #configBanner .close-banner:hover { opacity: 1; }
+
+  /* ── Main layout ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── Summary cards ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 1.75rem;
+  }
+  .card-metric {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1rem 1.25rem;
+  }
+  .card-metric .label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-hint);
+    margin-bottom: 6px;
+  }
+  .card-metric .value {
+    font-size: 28px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .card-metric .sub {
+    font-size: 11px;
+    color: var(--text-hint);
+    margin-top: 4px;
+  }
+  .card-metric.accent .value { color: var(--accent); }
+  .card-metric.danger .value { color: var(--danger); }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 99px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  .progress-fill.warn { background: #F0A500; }
+  .progress-fill.danger-fill { background: var(--danger); }
+
+  /* ── Panel row ── */
+  .panel-row {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Form card ── */
+  .form-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem;
+  }
+  .form-card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-hint);
+    margin-bottom: 14px;
+  }
+  .form-field { margin-bottom: 11px; }
+  .form-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+  }
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    width: 100%;
+    padding: 8px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+  }
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,107,74,0.12);
+  }
+  .form-field textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  .btn-primary:hover { background: #155c3e; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-strong);
+  }
+  .btn-ghost:hover { background: var(--surface2); }
+
+  /* ── Config card ── */
+  .config-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem;
+  }
+  .config-card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-hint);
+    margin-bottom: 14px;
+  }
+  .config-note {
+    font-size: 12px;
+    color: var(--text-hint);
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+  .config-note a { color: var(--accent); }
+  .config-note code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  /* ── Table card ── */
+  .table-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .table-toolbar h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .count-badge {
+    font-size: 11px;
+    background: var(--surface2);
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+  th {
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-hint);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th.num, td.num { text-align: right; }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #F9F9F7; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* Column widths */
+  col.c-no    { width: 40px; }
+  col.c-date  { width: 110px; }
+  col.c-bal   { width: 72px; }
+  col.c-spent { width: 68px; }
+  col.c-app   { width: 72px; }
+  col.c-rem   { width: 80px; }
+  col.c-reason{ width: 150px; }
+  col.c-remark{ width: 200px; }
+  col.c-appdate{ width: 104px; }
+  col.c-del   { width: 40px; }
+
+  .chip {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 99px;
+  }
+  .chip-green { background: var(--accent-bg); color: var(--accent-text); }
+  .chip-blue  { background: #E8F0FE; color: #1A4CA0; }
+  .chip-amber { background: var(--warn-bg); color: var(--warn-text); }
+  .chip-red   { background: var(--danger-bg); color: var(--danger-text); }
+
+  .val-good { color: var(--accent); font-weight: 600; }
+  .val-warn { color: #F0A500; font-weight: 600; }
+  .val-bad  { color: var(--danger); font-weight: 600; }
+  .val-dim  { color: var(--text-hint); }
+  .val-debit{ color: var(--danger); font-weight: 500; }
+
+  .row-bf td { background: #FAFAF8; }
+  .row-bf .bf-label { font-size: 12px; color: var(--text-hint); font-style: italic; }
+
+  .del-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-hint);
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: all 0.15s;
+  }
+  .del-btn:hover { background: var(--danger-bg); color: var(--danger); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1A1A18;
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err { background: var(--danger); }
+
+  /* ── Apps Script setup modal ── */
+  #setupModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #setupModal.open { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    max-width: 540px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal-box h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .modal-box p  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .steps { counter-reset: steps; list-style: none; margin-bottom: 16px; }
+  .steps li {
+    counter-increment: steps;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 7px 0 7px 32px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .steps code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 860px) {
+    .panel-row { grid-template-columns: 1fr; }
+    .summary-row { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    main { padding: 1rem 1rem 3rem; }
+    header { padding: 0 1rem; }
+    .summary-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .card-metric .value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-dot">
+      <svg viewBox="0 0 16 16"><path d="M8 2v4M4 8H2M14 8h-2M8 10v4M5 5l-1-1M12 4l-1 1M11 11l1 1M5 11l-1 1"/></svg>
+    </div>
+    Leave Tracker
+  </div>
+  <div class="header-right">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Not connected</span>
+    </div>
+    <button class="btn btn-ghost" onclick="openSetup()" style="font-size:12px;padding:6px 12px;">⚙ Setup</button>
+    <button class="btn btn-ghost" onclick="syncFromSheet()" style="font-size:12px;padding:6px 12px;">↻ Sync</button>
+    <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px;padding:6px 12px;">↓ CSV</button>
+  </div>
+</header>
+
+<!-- Config banner (shown when no URL is set) -->
+<div id="configBanner">
+  ⚠ No Google Sheets web app URL configured.
+  <a href="javascript:openSetup()">Set it up →</a>
+  <span class="close-banner" onclick="document.getElementById('configBanner').style.display='none'">×</span>
+</div>
+
+<!-- Setup modal -->
+<div id="setupModal">
+  <div class="modal-box">
+    <h3>Connect to Google Sheets</h3>
+    <p>This app reads and writes directly to your <strong>TaskTracker</strong> spreadsheet via a Google Apps Script web app you deploy once.</p>
+    <ol class="steps">
+      <li>Open your Google Sheet → <strong>Extensions → Apps Script</strong></li>
+      <li>Replace <em>all</em> code with the script below, then save (<code>Ctrl+S</code>)</li>
+      <li>Click <strong>Deploy → New deployment</strong> → type: <em>Web app</em></li>
+      <li>Set "Execute as" = <code>Me</code>, "Who has access" = <code>Anyone</code></li>
+      <li>Click <strong>Deploy</strong>, authorise, then copy the web app URL</li>
+      <li>Paste it below and click Save</li>
+    </ol>
+    <details style="margin-bottom:14px;">
+      <summary style="cursor:pointer;font-size:13px;font-weight:500;color:var(--accent);margin-bottom:8px;">View Apps Script code to paste ▾</summary>
+      <pre id="scriptCode" style="background:var(--surface2);border-radius:6px;padding:12px;font-size:11px;font-family:'JetBrains Mono',monospace;overflow-x:auto;line-height:1.5;color:var(--text);white-space:pre;">
+const SHEET_NAME = "TaskTracker";
+const BALANCE_TOTAL = 20;
+
+function doGet(e) {
+  const action = e.parameter.action || "read";
+  if (action === "read") return readData();
+  return ContentService.createTextOutput(
+    JSON.stringify({ error: "Unknown action" })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+  if (action === "add")    return addRow(data.entry);
+  if (action === "delete") return deleteRow(data.id);
+  return ContentService.createTextOutput(
+    JSON.stringify({ error: "Unknown action" })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+function readData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  const rows = sheet.getDataRange().getValues();
+  const headers = rows[0];
+  const entries = rows.slice(1).map(r => ({
+    id:      r[0],
+    date:    r[1] ? Utilities.formatDate(new Date(r[1]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+    balance: r[2],
+    spent:   r[3],
+    applied: r[4],
+    remained:r[5],
+    reason:  r[6],
+    remark:  r[7],
+    appDate: r[8] ? Utilities.formatDate(new Date(r[8]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+    isBF:    r[0] === 0
+  }));
+  return respond({ entries, balance: BALANCE_TOTAL });
+}
+
+function addRow(entry) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  const rows = sheet.getDataRange().getValues();
+  const dataRows = rows.slice(1).filter(r => r[0] !== 0);
+  const nextId = dataRows.length > 0 ? Math.max(...dataRows.map(r => Number(r[0]))) + 1 : 1;
+  const totalSpent = dataRows.reduce((s, r) => s + Number(r[4]), 0) + Number(entry.applied);
+  const remained = BALANCE_TOTAL - parseFloat(totalSpent.toFixed(1));
+  sheet.appendRow([
+    nextId,
+    entry.date,
+    BALANCE_TOTAL,
+    parseFloat(totalSpent.toFixed(1)),
+    Number(entry.applied),
+    parseFloat(remained.toFixed(1)),
+    entry.reason,
+    entry.remark,
+    entry.appDate
+  ]);
+  updateFilter_();
+  return respond({ ok: true, id: nextId });
+}
+
+function deleteRow(id) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+  recalcSpent_(sheet);
+  return respond({ ok: true });
+}
+
+function recalcSpent_(sheet) {
+  const rows = sheet.getDataRange().getValues();
+  let spent = 0;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === 0) continue;
+    spent = parseFloat((spent + Number(rows[i][4])).toFixed(1));
+    sheet.getRange(i + 1, 4).setValue(spent);
+    sheet.getRange(i + 1, 6).setValue(parseFloat((BALANCE_TOTAL - spent).toFixed(1)));
+  }
+}
+
+function updateFilter_() {
+  try {
+    const ss = SpreadsheetApp.getActive();
+    const criteria = SpreadsheetApp.newFilterCriteria()
+      .setHiddenValues(['', 'No']).build();
+    ss.getActiveSheet().getFilter()
+      .setColumnFilterCriteria(5, criteria);
+  } catch(e) {}
+}
+
+function respond(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+      </pre>
+      <button class="btn btn-ghost" onclick="copyScript()" style="margin-top:8px;font-size:12px;">⧉ Copy script</button>
+    </details>
+    <div class="form-field">
+      <label>Apps Script web app URL</label>
+      <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeSetup()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveConfig()" style="width:auto;">Save & test connection</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<main>
+
+  <!-- Summary row -->
+  <div class="summary-row">
+    <div class="card-metric">
+      <div class="label">Annual balance</div>
+      <div class="value mono" id="mTotal">20</div>
+      <div class="sub">days allocated</div>
+    </div>
+    <div class="card-metric danger">
+      <div class="label">Days spent</div>
+      <div class="value mono" id="mSpent">–</div>
+      <div class="sub" id="mSpentSub">loading…</div>
+      <div class="progress-bar"><div class="progress-fill" id="mBar" style="width:0%"></div></div>
+    </div>
+    <div class="card-metric accent">
+      <div class="label">Days remaining</div>
+      <div class="value mono" id="mRemained">–</div>
+      <div class="sub" id="mRemSub">loading…</div>
+    </div>
+    <div class="card-metric">
+      <div class="label">Entries</div>
+      <div class="value mono" id="mCount">–</div>
+      <div class="sub">leave applications</div>
+    </div>
+  </div>
+
+  <!-- Panel row -->
+  <div class="panel-row">
+
+    <!-- Add form -->
+    <div class="form-card">
+      <h2>Add leave entry</h2>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Leave taken date</label>
+          <input type="date" id="fDate" />
+        </div>
+        <div class="form-field">
+          <label>Days applied</label>
+          <input type="number" id="fApplied" min="0.5" step="0.5" placeholder="e.g. 1" />
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Leave reason</label>
+        <select id="fReason">
+          <option value="">Select reason</option>
+          <option>Busy at home</option>
+          <option>Going to province</option>
+          <option>Going to homeland</option>
+          <option>Children Graduation</option>
+          <option>Medical</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Personal remark</label>
+        <input type="text" id="fRemark" placeholder="Optional note (e.g. HCMC Marathon)" />
+      </div>
+      <div class="form-field">
+        <label>Application date</label>
+        <input type="date" id="fAppDate" />
+      </div>
+      <button class="btn btn-primary" id="addBtn" onclick="addEntry()">+ Add entry</button>
+    </div>
+
+    <!-- Settings / connection -->
+    <div class="config-card">
+      <h2>Connection</h2>
+      <div class="form-field">
+        <label>Apps Script web app URL</label>
+        <input type="url" id="urlInput" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-primary" onclick="saveAndTest()" style="flex:1;">Save & connect</button>
+        <button class="btn btn-ghost" onclick="syncFromSheet()">↻ Refresh</button>
+      </div>
+      <div class="config-note" style="margin-top:14px;">
+        <strong>No URL yet?</strong> Click <strong>⚙ Setup</strong> in the header for step-by-step instructions and the Apps Script code to paste into your Google Sheet.<br><br>
+        Once deployed, paste the <code>/exec</code> URL above. Data stays in <em>your</em> Google Sheet — this page just reads and writes it.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="table-toolbar-left">
+        <h2>Leave history</h2>
+        <span class="count-badge" id="rowCount">0 entries</span>
+      </div>
+      <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px;padding:6px 12px;">↓ Export CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col class="c-no"><col class="c-date"><col class="c-bal">
+          <col class="c-spent"><col class="c-app"><col class="c-rem">
+          <col class="c-reason"><col class="c-remark"><col class="c-appdate">
+          <col class="c-del">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date taken</th>
+            <th class="num">Balance</th>
+            <th class="num">Spent</th>
+            <th class="num">Applied</th>
+            <th class="num">Remained</th>
+            <th>Reason</th>
+            <th>Remark</th>
+            <th>App. date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-hint);">
+            Enter your web app URL above and click <strong>Save & connect</strong> to load your data.
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const BALANCE_TOTAL = 20;
+let entries = [];
+let WEB_APP_URL = localStorage.getItem("lt_url") || "";
+
+// ── Init ──
+(function init() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById("fDate").value = today;
+  document.getElementById("fAppDate").value = today;
+
+  if (WEB_APP_URL) {
+    document.getElementById("urlInput").value = WEB_APP_URL;
+    document.getElementById("configBanner").style.display = "none";
+    syncFromSheet();
+  }
+})();
+
+// ── Sync ──
+async function syncFromSheet() {
+  if (!WEB_APP_URL) { toast("No URL set — click Setup", true); return; }
+  setSyncState("loading", "Syncing…");
+  try {
+    const res = await fetch(WEB_APP_URL + "?action=read");
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    entries = data.entries || [];
+    render();
+    setSyncState("ok", "Synced " + new Date().toLocaleTimeString());
+  } catch(e) {
+    setSyncState("err", "Sync failed");
+    toast("Could not reach Google Sheets: " + e.message, true);
+  }
+}
+
+// ── Add entry ──
+async function addEntry() {
+  const date    = document.getElementById("fDate").value;
+  const applied = parseFloat(document.getElementById("fApplied").value);
+  const reason  = document.getElementById("fReason").value || "Other";
+  const remark  = document.getElementById("fRemark").value.trim();
+  const appDate = document.getElementById("fAppDate").value;
+
+  if (!date)             { toast("Enter a date", true); return; }
+  if (!applied || applied <= 0) { toast("Enter days applied", true); return; }
+  if (!WEB_APP_URL)      { toast("Connect to Google Sheets first", true); return; }
+
+  const btn = document.getElementById("addBtn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  try {
+    const res = await fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "add", entry: { date, applied, reason, remark, appDate } })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    toast("Entry saved to Google Sheets ✓");
+    document.getElementById("fApplied").value = "";
+    document.getElementById("fRemark").value = "";
+    document.getElementById("fReason").value = "";
+    await syncFromSheet();
+  } catch(e) {
+    toast("Save failed: " + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "+ Add entry";
+  }
+}
+
+// ── Delete ──
+async function deleteEntry(id) {
+  if (!confirm("Delete entry #" + id + "?")) return;
+  if (!WEB_APP_URL) { toast("Not connected", true); return; }
+  try {
+    const res = await fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", id })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    toast("Entry deleted");
+    await syncFromSheet();
+  } catch(e) {
+    toast("Delete failed: " + e.message, true);
+  }
+}
+
+// ── Render ──
+function render() {
+  const tbody = document.getElementById("tbody");
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-hint);">No entries yet.</td></tr>`;
+    updateSummary(0, BALANCE_TOTAL, 0);
+    return;
+  }
+
+  let totalSpent = 0, totalRemained = BALANCE_TOTAL;
+  const dataRows = entries.filter(e => !e.isBF);
+  if (dataRows.length) {
+    const last = dataRows[dataRows.length - 1];
+    totalSpent   = parseFloat(last.spent) || 0;
+    totalRemained = parseFloat(last.remained) || BALANCE_TOTAL;
+  }
+
+  tbody.innerHTML = entries.map(e => {
+    if (e.isBF || e.id === 0) {
+      return `<tr class="row-bf">
+        <td class="val-dim mono">0</td>
+        <td class="bf-label">Balance BF.</td>
+        <td class="num val-debit mono">${BALANCE_TOTAL}</td>
+        <td class="num mono">0</td>
+        <td class="num mono">0</td>
+        <td class="num val-good mono">${BALANCE_TOTAL}</td>
+        <td>–</td>
+        <td><strong>New Year</strong></td>
+        <td class="val-dim">Balance BF.</td>
+        <td></td>
+      </tr>`;
+    }
+    const rem = parseFloat(e.remained);
+    const remCls = rem <= 3 ? "val-bad" : rem <= 7 ? "val-warn" : "val-good";
+    return `<tr>
+      <td class="val-dim mono">${e.id}</td>
+      <td class="mono">${fmtDate(e.date)}</td>
+      <td class="num val-debit mono">${BALANCE_TOTAL}</td>
+      <td class="num mono">${parseFloat(e.spent).toFixed(1)}</td>
+      <td class="num mono">${parseFloat(e.applied).toFixed(1)}</td>
+      <td class="num ${remCls} mono">${rem.toFixed(1)}</td>
+      <td>${reasonChip(e.reason)}</td>
+      <td title="${e.remark}">${e.remark}</td>
+      <td class="val-dim mono">${fmtDate(e.appDate)}</td>
+      <td><button class="del-btn" onclick="deleteEntry(${e.id})" title="Delete">×</button></td>
+    </tr>`;
+  }).join("");
+
+  updateSummary(totalSpent, totalRemained, dataRows.length);
+  document.getElementById("rowCount").textContent = dataRows.length + " entr" + (dataRows.length === 1 ? "y" : "ies");
+}
+
+function updateSummary(spent, remained, count) {
+  const pct = Math.round((spent / BALANCE_TOTAL) * 100);
+  document.getElementById("mSpent").textContent = spent.toFixed(1);
+  document.getElementById("mSpentSub").textContent = pct + "% of balance used";
+  document.getElementById("mRemained").textContent = remained.toFixed(1);
+  document.getElementById("mRemSub").textContent = remained <= 3 ? "⚠ Running low" : remained <= 7 ? "Use carefully" : "Available";
+  document.getElementById("mCount").textContent = count;
+
+  const bar = document.getElementById("mBar");
+  bar.style.width = pct + "%";
+  bar.className = "progress-fill" + (pct >= 90 ? " danger-fill" : pct >= 70 ? " warn" : "");
+
+  const remCard = document.querySelector(".card-metric.accent");
+  remCard.className = "card-metric " + (remained <= 3 ? "danger" : "accent");
+}
+
+// ── Helpers ──
+function fmtDate(d) {
+  if (!d) return "–";
+  const p = d.split("-");
+  if (p.length !== 3) return d;
+  const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${p[2]}-${m[parseInt(p[1])-1]}-${p[0]}`;
+}
+
+function reasonChip(r) {
+  if (!r || r === "-" || r === "–") return `<span class="val-dim">–</span>`;
+  const map = { "Busy at home":"chip-blue","Going to province":"chip-amber","Going to homeland":"chip-green","Children Graduation":"chip-green","Medical":"chip-red" };
+  return `<span class="chip ${map[r]||"chip-blue"}">${r}</span>`;
+}
+
+function setSyncState(state, label) {
+  document.getElementById("syncDot").className = "sync-dot " + state;
+  document.getElementById("syncLabel").textContent = label;
+}
+
+function toast(msg, err) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show" + (err ? " err" : "");
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = "", 3000);
+}
+
+// ── Config / Setup ──
+function saveConfig() {
+  const url = document.getElementById("webAppUrl").value.trim();
+  if (!url) { toast("Paste the web app URL", true); return; }
+  WEB_APP_URL = url;
+  localStorage.setItem("lt_url", url);
+  document.getElementById("urlInput").value = url;
+  document.getElementById("configBanner").style.display = "none";
+  closeSetup();
+  syncFromSheet();
+}
+
+function saveAndTest() {
+  const url = document.getElementById("urlInput").value.trim();
+  if (!url) { toast("Paste the web app URL", true); return; }
+  WEB_APP_URL = url;
+  localStorage.setItem("lt_url", url);
+  document.getElementById("configBanner").style.display = "none";
+  toast("URL saved — connecting…");
+  syncFromSheet();
+}
+
+function openSetup()  { document.getElementById("setupModal").classList.add("open"); }
+function closeSetup() { document.getElementById("setupModal").classList.remove("open"); }
+document.getElementById("setupModal").addEventListener("click", e => {
+  if (e.target === document.getElementById("setupModal")) closeSetup();
+});
+
+function copyScript() {
+  const text = document.getElementById("scriptCode").textContent;
+  navigator.clipboard.writeText(text).then(() => toast("Script copied ✓"));
+}
+
+// ── Export CSV ──
+function exportCSV() {
+  const header = "App No.,Leave Taken Date,Leave Balance,Leave Spent,Leave Applied,Leave Remained,Leave Reason,Leave Personal Remark,Leave Application Date";
+  const lines = entries.map(e => [
+    e.id,
+    e.isBF ? "Balance BF." : fmtDate(e.date),
+    BALANCE_TOTAL,
+    e.isBF ? 0 : parseFloat(e.spent).toFixed(1),
+    parseFloat(e.applied).toFixed(1),
+    e.isBF ? BALANCE_TOTAL : parseFloat(e.remained).toFixed(1),
+    e.reason,
+    `"${e.remark}"`,
+    e.isBF ? "Balance BF." : fmtDate(e.appDate)
+  ].join(","));
+  const csv = [header, ...lines].join("\n");
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "leave_tracker.csv";
+  a.click();
+}
+</script>
+</body>
+</html>
