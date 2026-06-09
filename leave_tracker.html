@@ -794,13 +794,21 @@ let WEB_APP_URL = localStorage.getItem("lt_url") || "";
   }
 })();
 
+// ── Fetch via GET (CORS-safe for Apps Script) ──
+async function gsFetch(params) {
+  const url = WEB_APP_URL + "?" + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { throw new Error("Bad response: " + text.slice(0, 120)); }
+}
+
 // ── Sync ──
 async function syncFromSheet() {
   if (!WEB_APP_URL) { toast("No URL set — click Setup", true); return; }
   setSyncState("loading", "Syncing…");
   try {
-    const res = await fetch(WEB_APP_URL + "?action=read");
-    const data = await res.json();
+    const data = await gsFetch({ action: "read" });
     if (data.error) throw new Error(data.error);
     entries = data.entries || [];
     render();
@@ -828,11 +836,7 @@ async function addEntry() {
   btn.textContent = "Saving…";
 
   try {
-    const res = await fetch(WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "add", entry: { date, applied, reason, remark, appDate } })
-    });
-    const data = await res.json();
+    const data = await gsFetch({ action: "add", date, applied, reason, remark, appDate });
     if (data.error) throw new Error(data.error);
     toast("Entry saved to Google Sheets ✓");
     document.getElementById("fApplied").value = "";
@@ -852,11 +856,7 @@ async function deleteEntry(id) {
   if (!confirm("Delete entry #" + id + "?")) return;
   if (!WEB_APP_URL) { toast("Not connected", true); return; }
   try {
-    const res = await fetch(WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "delete", id })
-    });
-    const data = await res.json();
+    const data = await gsFetch({ action: "delete", id });
     if (data.error) throw new Error(data.error);
     toast("Entry deleted");
     await syncFromSheet();
